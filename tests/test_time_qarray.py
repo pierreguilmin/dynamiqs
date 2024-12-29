@@ -50,9 +50,9 @@ class TestConstantTimeQArray:
         assert_equal(x(0.0), [[[0, 1], [2, 3]], [[0, 1], [2, 3]]])
 
     def test_conj(self):
-        x = ConstantTimeQArray(jnp.array([1 + 1j, 2 + 2j]))
+        x = constant([[0 + 0j, 1 + 1j], [2 + 2j, 3 + 3j]])
         x = x.conj()
-        assert_equal(x(0.0), [1 - 1j, 2 - 2j])
+        assert_equal(x(0.0), [[0 - 0j, 1 - 1j], [2 - 2j, 3 - 3j]])
 
     def test_neg(self):
         x = -self.x

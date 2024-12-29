@@ -5,6 +5,7 @@ from functools import wraps
 from typing import Any
 
 import jax
+import jax.numpy as jnp
 from jax._src.lib import xla_client
 from jaxtyping import PyTree
 
@@ -29,7 +30,7 @@ def _astimeqarray(x: QArrayLike | TimeQArray) -> TimeQArray:
         try:
             # same as dq.constant() but not checking the shape
             array = asqarray(x)
-            return ConstantTimeQArray(array)
+            return ConstantTimeQArray(-jnp.inf, jnp.inf, array)
         except (TypeError, ValueError) as e:
             raise TypeError(
                 'Argument must be a qarray-like or a time-qarray, but has type'
