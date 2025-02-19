@@ -28,6 +28,7 @@ dependencies = [
     "jaxtyping",
     "diffrax>=0.5.1",  # for complex support (0.5.0) and progress meter (0.5.1)
     "equinox",
+    "optimistix",
     "pillow",
     "cmasher>=1.8.0",  # avoid matplotlib colormaps deprecation warning
     "ipython",
@@ -69,6 +70,7 @@ dev = [
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+exclude = ["examples/*"]
 
 [tool.ruff.format]
 quote-style = "single"

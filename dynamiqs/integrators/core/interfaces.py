@@ -5,6 +5,7 @@ from abc import abstractmethod
 import equinox as eqx
 from jax import Array
 from jaxtyping import Scalar
+from optimistix import AbstractRootFinder
 
 from ..._utils import _concatenate_sort
 from ...options import Options
@@ -46,6 +47,13 @@ class MEInterface(AbstractTimeInterface):
     def discontinuity_ts(self) -> Array | None:
         ts = [x.discontinuity_ts for x in [self.H, *self.Ls]]
         return _concatenate_sort(*ts)
+
+
+class MCInterface(MEInterface):
+    """Interface for the Monte-Carlo jump unraveling of the master equation."""
+
+    keys: Array
+    root_finder: AbstractRootFinder | None
 
 
 class DSSEInterface(MEInterface):

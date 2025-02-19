@@ -18,6 +18,7 @@ class Options(eqx.Module):
     progress_meter: AbstractProgressMeter | None = TqdmProgressMeter()
     t0: ScalarLike | None = None
     save_extra: callable[[QArray], PyTree] | None = None
+    max_jumps: int = 100
     nmaxclick: int = 10_000
     smart_sampling: bool = False
 
@@ -29,6 +30,7 @@ class Options(eqx.Module):
         progress_meter: AbstractProgressMeter | None = TqdmProgressMeter(),  # noqa: B008
         t0: ScalarLike | None = None,
         save_extra: callable[[QArray], PyTree] | None = None,
+        max_jumps: int = 100,
         nmaxclick: int = 10_000,
         smart_sampling: bool = False,
     ):
@@ -45,6 +47,7 @@ class Options(eqx.Module):
 
         # make `save_extra` a valid Pytree with `Partial`
         self.save_extra = jtu.Partial(save_extra) if save_extra is not None else None
+        self.max_jumps = max_jumps
 
     def __str__(self) -> str:
         return tree_str_inline(self)
@@ -65,6 +68,13 @@ def check_options(options: Options, solver_name: str):
             'progress_meter',
             't0',
             'save_extra',
+        ),
+        'mcsolve': (
+            'save_states',
+            'cartesian_batching',
+            't0',
+            'save_extra',
+            'max_jumps',
         ),
         'sepropagator': ('save_propagators', 'progress_meter', 't0', 'save_extra'),
         'mepropagator': ('save_propagators', 'cartesian_batching', 't0', 'save_extra'),

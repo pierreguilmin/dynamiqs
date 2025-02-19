@@ -14,6 +14,7 @@ from .qarrays.utils import to_jax
 
 __all__ = [
     'FloquetResult',
+    'MCSolveResult',
     'MEPropagatorResult',
     'JSSESolveResult',
     'DSSESolveResult',
@@ -182,6 +183,66 @@ class SESolveResult(SolveResult):
 
 class MESolveResult(SolveResult):
     pass
+
+
+class MCJumpResult(SolveResult):
+    jump_times: Array
+    num_jumps: Array
+
+
+class MCNoJumpResult(SolveResult):
+    no_jump_prob: Array
+
+
+class MCSolveResult(SolveResult):
+    _no_jump_result: MCNoJumpResult
+    _jump_result: MCJumpResult
+
+    @property
+    def no_jump_states(self) -> QArray:
+        return self._no_jump_result.states
+
+    @property
+    def jump_states(self) -> QArray:
+        return self._jump_result.states
+
+    @property
+    def final_no_jump_state(self) -> QArray:
+        return self._no_jump_result.final_state
+
+    @property
+    def final_jump_states(self) -> QArray:
+        return self._jump_result.final_state
+
+    @property
+    def no_jump_prob(self) -> Array:
+        return self._no_jump_result.no_jump_prob
+
+    @property
+    def jump_times(self) -> Array:
+        return self._jump_result.jump_times
+
+    @property
+    def num_jumps(self) -> Array:
+        return self._jump_result.jump_times
+
+    def __str__(self) -> str:
+        parts = {
+            'No-jump states': array_str(self.no_jump_states),
+            'Jump states': array_str(self.jump_states),
+            'No-jump probability  ': array_str(self.no_jump_prob),
+            'Jump times  ': array_str(self.jump_times),
+            'Number of jumps in each trajectory  ': array_str(self.num_jumps),
+            'Infos': self.infos if self.infos is not None else None,
+            'Expects ': array_str(self.expects) if self.expects is not None else None,
+        }
+        parts = {k: v for k, v in parts.items() if v is not None}
+        parts_str = '\n'.join(f'{k}: {v}' for k, v in parts.items())
+        return '==== MCResult ====\n' + parts_str
+
+    @classmethod
+    def out_axes(cls) -> SolveResult:
+        return cls(None, None, None, None, 0, 0, 0, 0)
 
 
 class SEPropagatorResult(PropagatorResult):
