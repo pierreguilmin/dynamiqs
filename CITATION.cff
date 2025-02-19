@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+title: Dynamiqs
+abstract: Open-source Python library for GPU-accelerated and differentiable simulation of quantum systems
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Pierre
+    family-names: Guilmin
+    alias: pierreguilmin
+    email: pierre.guilmin@alice-bob.com
+    affiliation: >-
+      Alice & Bob, Laboratoire de Physique de l’École
+      Normale Supérieure, Mines Paris, Inria, CNRS, ENS-PSL,
+      Centre Automatique et Systèmes (CAS), Sorbonne
+      Université, PSL Research University
+  - given-names: Ronan
+    family-names: Gautier
+    alias: gautierronan
+    email: ronan.gautier@alice-bob.com
+    affiliation: Alice & Bob
+  - given-names: Adrien
+    family-names: Bocquet
+    alias: abocquet
+    affiliation: >-
+      Alice & Bob, Laboratoire de Physique de l’École
+      Normale Supérieure, Centre Automatique et Systèmes (CAS), 
+      Mines Paris PSL, Inria, CNRS, ENS-PSL, Sorbonne
+      Université, PSL Research University
+  - given-names: Élie
+    family-names: Genois
+    alias: eliegenois
+    affiliation: >-
+      Institut quantique & Département de Physique,
+      Université de Sherbrooke
+  - given-names: Daniel
+    family-names: Weiss
+    alias: dkweiss31
+    affiliation: >-
+      Departments of Applied Physics and Physics, Yale
+      University
+repository-code: 'https://github.com/dynamiqs/dynamiqs'
+url: 'https://www.dynamiqs.org'
+license: Apache-2.0
