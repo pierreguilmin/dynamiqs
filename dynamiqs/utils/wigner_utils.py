@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from jax import Array, lax
 from jaxtyping import ArrayLike
 
-from .._checks import check_shape
+from .._checks import _warn_non_normalised, check_shape
 from ..qarrays.qarray import QArrayLike
 from ..qarrays.utils import to_jax
 from .general import todm
@@ -51,6 +51,8 @@ def wigner(
     """  # noqa: E501
     state = to_jax(state)
     check_shape(state, 'state', '(..., n, 1)', '(..., n, n)')
+
+    _warn_non_normalised(state, 'state')
 
     # === convert state to density matrix
     state = to_jax(todm(state))
@@ -134,3 +136,4 @@ def _laguerre_series(i: int, x: Array, rho: Array, n: int) -> Array:
         return y0 - y1 * (i + 1 - x) * (i + 1) ** (-0.5)
 
     return lax.cond(n - i == 1, n_1, lambda: lax.cond(n - i == 2, n_2, n_other))
+
