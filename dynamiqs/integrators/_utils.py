@@ -15,13 +15,12 @@ from ..qarrays.utils import asqarray
 from ..time_qarray import (
     ConstantTimeQArray,
     PWCTimeQArray,
-    Shape,
     SummedTimeQArray,
     TimeQArray,
 )
 
 
-def _astimeqarray(x: QArrayLike | TimeQArray) -> TimeQArray:
+def astimeqarray(x: QArrayLike | TimeQArray) -> TimeQArray:
     if isinstance(x, TimeQArray):
         return x
     else:
@@ -86,10 +85,6 @@ def assert_method_supported(method: Method, supported_methods: Sequence[Method])
             f'Method of type `{type(method).__name__}` is not supported (supported'
             f' method types: {supported_str}).'
         )
-
-
-def is_shape(x: object) -> bool:
-    return isinstance(x, Shape)
 
 
 def multi_vmap(

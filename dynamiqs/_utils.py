@@ -19,7 +19,7 @@ def obj_type_str(x: Any) -> str:
     return type_str(type(x))
 
 
-def _get_default_dtype() -> jnp.float32 | jnp.float64:
+def get_default_dtype() -> jnp.float32 | jnp.float64:
     default_dtype = jnp.array(0.0).dtype
     return jnp.float64 if default_dtype == jnp.float64 else jnp.float32
 
@@ -27,7 +27,7 @@ def _get_default_dtype() -> jnp.float32 | jnp.float64:
 def cdtype() -> jnp.complex64 | jnp.complex128:
     # the default dtype for complex arrays is determined by the default floating point
     # dtype
-    dtype = _get_default_dtype()
+    dtype = get_default_dtype()
     if dtype is jnp.float32:
         return jnp.complex64
     elif dtype is jnp.float64:
@@ -41,14 +41,14 @@ def tree_str_inline(x: PyTree) -> str:
     return eqx.tree_pformat(x, indent=0).replace('\n', '').replace(',', ', ')
 
 
-def _concatenate_sort(*args: Array | None) -> Array | None:
+def concatenate_sort(*args: Array | None) -> Array | None:
     args = [x for x in args if x is not None]
     if len(args) == 0:
         return None
     return jnp.sort(jnp.concatenate(args))
 
 
-def _is_batched_scalar(y: ArrayLike) -> bool:
+def is_batched_scalar(y: ArrayLike) -> bool:
     # check if a qarray-like is a scalar or a set of scalars of shape (..., 1, 1)
     return isinstance(y, get_args(ScalarLike)) or (
         isinstance(y, get_args(ArrayLike))
@@ -60,7 +60,7 @@ def _is_batched_scalar(y: ArrayLike) -> bool:
     )
 
 
-def _check_compatible_dims(dims1: tuple[int, ...], dims2: tuple[int, ...]):
+def check_compatible_dims(dims1: tuple[int, ...], dims2: tuple[int, ...]):
     if dims1 != dims2:
         raise ValueError(
             f'Qarrays have incompatible dimensions. Got {dims1} and {dims2}.'

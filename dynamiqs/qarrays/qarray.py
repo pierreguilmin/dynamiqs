@@ -13,7 +13,7 @@ from jax import Array, Device
 from jaxtyping import ArrayLike
 from qutip import Qobj
 
-from .._utils import _is_batched_scalar
+from .._utils import is_batched_scalar
 
 if TYPE_CHECKING:
     from .dense_qarray import DenseQArray
@@ -52,20 +52,43 @@ def isqarraylike(x: Any) -> bool:
     return False
 
 
-def _to_jax(x: QArrayLike) -> Array:
+def to_jax(x: QArrayLike) -> Array:
+    """Convert a qarray-like into a JAX array.
+
+    Args:
+        x: Object to convert.
+
+    Returns:
+        JAX array.
+
+    Examples:
+        >>> dq.to_jax(dq.fock(3, 1))
+        Array([[0.+0.j],
+               [1.+0.j],
+               [0.+0.j]], dtype=complex64)
+        >>> dq.to_jax([qt.sigmax(), qt.sigmay(), qt.sigmaz()])
+        Array([[[ 0.+0.j,  1.+0.j],
+                [ 1.+0.j,  0.+0.j]],
+        <BLANKLINE>
+               [[ 0.+0.j,  0.-1.j],
+                [ 0.+1.j,  0.+0.j]],
+        <BLANKLINE>
+               [[ 1.+0.j,  0.+0.j],
+                [ 0.+0.j, -1.+0.j]]], dtype=complex64)
+    """
     if isinstance(x, QArray):
         return x.to_jax()
     elif isinstance(x, Qobj):
         return jnp.asarray(x.full())
     elif isinstance(x, Sequence):
-        return jnp.asarray([_to_jax(sub_x) for sub_x in x])
+        return jnp.asarray([to_jax(sub_x) for sub_x in x])
     else:
         return jnp.asarray(x)
 
 
-def _get_dims(x: QArrayLike) -> tuple[int, ...] | None:
+def get_dims(x: QArrayLike) -> tuple[int, ...] | None:
     if isinstance(x, Sequence):
-        sub_dims = [_get_dims(sub_x) for sub_x in x]
+        sub_dims = [get_dims(sub_x) for sub_x in x]
         return sub_dims[0] if all(sd == sub_dims[0] for sd in sub_dims) else None
     if isinstance(x, QArray):
         return x.dims
@@ -76,13 +99,36 @@ def _get_dims(x: QArrayLike) -> tuple[int, ...] | None:
         return None
 
 
-def _to_numpy(x: QArrayLike) -> np.ndarray:
+def to_numpy(x: QArrayLike) -> np.ndarray:
+    """Convert a qarray-like into a NumPy array.
+
+    Args:
+        x: Object to convert.
+
+    Returns:
+        NumPy array.
+
+    Examples:
+        >>> dq.to_numpy(dq.fock(3, 1))
+        array([[0.+0.j],
+               [1.+0.j],
+               [0.+0.j]], dtype=complex64)
+        >>> dq.to_numpy([qt.sigmax(), qt.sigmay(), qt.sigmaz()])
+        array([[[ 0.+0.j,  1.+0.j],
+                [ 1.+0.j,  0.+0.j]],
+        <BLANKLINE>
+               [[ 0.+0.j,  0.-1.j],
+                [ 0.+1.j,  0.+0.j]],
+        <BLANKLINE>
+               [[ 1.+0.j,  0.+0.j],
+                [ 0.+0.j, -1.+0.j]]])
+    """
     if isinstance(x, QArray):
         return x.to_numpy()
     elif isinstance(x, Qobj):
         return np.asarray(x.full())
     elif isinstance(x, Sequence):
-        return np.asarray([_to_numpy(sub_x) for sub_x in x])
+        return np.asarray([to_numpy(sub_x) for sub_x in x])
     else:
         return np.asarray(x)
 
@@ -450,7 +496,7 @@ class QArray(eqx.Module):
 
     @abstractmethod
     def __mul__(self, y: ArrayLike) -> QArray:
-        if not _is_batched_scalar(y):
+        if not is_batched_scalar(y):
             raise NotImplementedError(
                 'Element-wise multiplication of two qarrays with the `*` operator is '
                 'not supported. For matrix multiplication, use `x @ y`. For '
@@ -474,7 +520,7 @@ class QArray(eqx.Module):
 
     @abstractmethod
     def __add__(self, y: QArrayLike) -> QArray:
-        if _is_batched_scalar(y):
+        if is_batched_scalar(y):
             raise NotImplementedError(
                 'Adding a scalar to a qarray with the `+` operator is not supported. '
                 'To add a scaled identity matrix, use `x + scalar * dq.eye_like(x)`.'
@@ -482,7 +528,7 @@ class QArray(eqx.Module):
             )
 
         if isinstance(y, QArray):
-            _check_compatible_dims(self.dims, y.dims)
+            check_compatible_dims(self.dims, y.dims)
 
     def __radd__(self, y: QArrayLike) -> QArray:
         return self.__add__(y)
@@ -496,17 +542,17 @@ class QArray(eqx.Module):
     @abstractmethod
     def __matmul__(self, y: QArrayLike) -> QArray | Array:
         if isinstance(y, QArray):
-            _check_compatible_dims(self.dims, y.dims)
+            check_compatible_dims(self.dims, y.dims)
 
-        if _is_batched_scalar(y):
+        if is_batched_scalar(y):
             raise TypeError('Attempted matrix product between a scalar and a qarray.')
 
     @abstractmethod
     def __rmatmul__(self, y: QArrayLike) -> QArray:
         if isinstance(y, QArray):
-            _check_compatible_dims(self.dims, y.dims)
+            check_compatible_dims(self.dims, y.dims)
 
-        if _is_batched_scalar(y):
+        if is_batched_scalar(y):
             raise TypeError('Attempted matrix product between a scalar and a qarray.')
 
     @abstractmethod
@@ -546,7 +592,7 @@ class QArray(eqx.Module):
             New qarray resulting from the element-wise multiplication.
         """
         if isinstance(y, QArray):
-            _check_compatible_dims(self.dims, y.dims)
+            check_compatible_dims(self.dims, y.dims)
 
     @abstractmethod
     def elpow(self, power: int) -> QArray:
@@ -564,7 +610,7 @@ class QArray(eqx.Module):
         pass
 
 
-def _check_compatible_dims(dims1: tuple[int, ...], dims2: tuple[int, ...]):
+def check_compatible_dims(dims1: tuple[int, ...], dims2: tuple[int, ...]):
     if dims1 != dims2:
         raise ValueError(
             f'Qarrays have incompatible Hilbert space dimensions. '

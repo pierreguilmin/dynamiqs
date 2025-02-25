@@ -17,8 +17,8 @@ from .qarray import (
     QArrayLike,
     _in_last_two_dims,
     _include_last_two_dims,
-    _to_jax,
     isqarraylike,
+    to_jax,
 )
 from .sparsedia_primitives import (
     add_sparsedia_sparsedia,
@@ -286,7 +286,7 @@ class SparseDIAQArray(QArray):
             )
             return self._replace(offsets=offsets, diags=diags)
         elif isqarraylike(y):
-            y = _to_jax(y)
+            y = to_jax(y)
             data = matmul_sparsedia_array(self.offsets, self.diags, y)
             return DenseQArray(self.dims, self.vectorized, data)
 
@@ -296,7 +296,7 @@ class SparseDIAQArray(QArray):
         super().__rmatmul__(y)
 
         if isqarraylike(y):
-            y = _to_jax(y)
+            y = to_jax(y)
             data = matmul_array_sparsedia(y, self.offsets, self.diags)
             return DenseQArray(self.dims, self.vectorized, data)
 
@@ -336,7 +336,7 @@ class SparseDIAQArray(QArray):
                 self.offsets, self.diags, y.offsets, y.diags
             )
         else:
-            offsets, diags = mul_sparsedia_array(self.offsets, self.diags, _to_jax(y))
+            offsets, diags = mul_sparsedia_array(self.offsets, self.diags, to_jax(y))
 
         return self._replace(offsets=offsets, diags=diags)
 

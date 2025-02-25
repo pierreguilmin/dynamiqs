@@ -3,6 +3,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 import numpy as np
 from IPython.display import Image
+from jaxtyping import ArrayLike
 from matplotlib.axes import Axes
 from matplotlib.colors import Normalize
 
@@ -17,7 +18,7 @@ __all__ = ['wigner', 'wigner_gif', 'wigner_mosaic']
 
 @optional_ax
 def plot_wigner_data(
-    wigner: QArrayLike,
+    wigner: ArrayLike,
     xmax: float,
     ymax: float,
     *,

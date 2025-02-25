@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from jax import Array
 from jaxtyping import PyTree
 
-from dynamiqs._utils import _concatenate_sort
+from dynamiqs._utils import concatenate_sort
 
 from ...qarrays.qarray import QArray
 from ...result import Result, Saved
@@ -63,7 +63,7 @@ class ExpmIntegrator(BaseIntegrator, AbstractSaveMixin, AbstractTimeInterface):
         disc_ts = self.discontinuity_ts
         if disc_ts is not None:
             disc_ts = disc_ts.clip(self.t0, self.t1)
-        times = _concatenate_sort(jnp.asarray([self.t0]), self.ts, disc_ts)  # (ntimes,)
+        times = concatenate_sort(jnp.asarray([self.t0]), self.ts, disc_ts)  # (ntimes,)
 
         # === compute time differences (null for times outside [t0, t1])
         delta_ts = jnp.diff(times)  # (ntimes-1,)

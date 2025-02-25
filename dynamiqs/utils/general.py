@@ -8,8 +8,8 @@ import numpy as np
 from jax import Array
 
 from .._checks import check_hermitian, check_shape
-from ..qarrays.qarray import QArray, QArrayLike, _get_dims, _to_jax
-from ..qarrays.utils import _init_dims, asqarray, to_jax
+from ..qarrays.qarray import QArray, QArrayLike, get_dims
+from ..qarrays.utils import asqarray, init_dims, to_jax
 
 __all__ = [
     'bloch_coordinates',
@@ -329,9 +329,9 @@ def ptrace(
         [[0.5 0. ]
          [0.  0.5]]
     """
-    xdims = _get_dims(x)
-    x = _to_jax(x)
-    dims = _init_dims(xdims, dims, x.shape)
+    xdims = get_dims(x)
+    x = to_jax(x)
+    dims = init_dims(xdims, dims, x.shape)
     check_shape(x, 'x', '(..., n, 1)', '(..., 1, n)', '(..., n, n)')
 
     # convert keep and dims to numpy arrays

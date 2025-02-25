@@ -6,7 +6,7 @@ import equinox as eqx
 import jax.numpy as jnp
 from jax import Array
 
-from ._utils import _get_default_dtype
+from ._utils import get_default_dtype
 from .qarrays.qarray import QArray, QArrayLike
 from .qarrays.utils import asqarray
 
@@ -37,7 +37,7 @@ _cases = {
 }
 
 
-def has_shape(x: Array | QArray, shape: str) -> bool:
+def _has_shape(x: Array | QArray, shape: str) -> bool:
     if shape in _cases:
         return _cases[shape](x)
     else:
@@ -52,7 +52,7 @@ def check_shape(
     # subs={'?': 'nH?'} to replace the '?' by 'nH?' in the shape specification
 
     for shape in shapes:
-        if has_shape(x, shape):
+        if _has_shape(x, shape):
             return
 
     if len(shapes) == 1:
@@ -111,10 +111,10 @@ def check_hermitian(x: QArray, argname: str) -> QArray:
     )
 
 
-def _warn_non_normalised(x: QArrayLike, argname: str):
+def warn_non_normalised(x: QArrayLike, argname: str):
     # issue a warning if the input qarray-like is not normalised
     x = asqarray(x)
-    atol = 1e-2 if _get_default_dtype() == jnp.float32 else 1e-6
+    atol = 1e-2 if get_default_dtype() == jnp.float32 else 1e-6
     norm = x.norm()
     if not jnp.allclose(norm, 1.0, rtol=0.0, atol=atol):
         warnings.warn(

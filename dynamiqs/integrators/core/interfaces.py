@@ -6,7 +6,7 @@ import equinox as eqx
 from jax import Array
 from jaxtyping import Scalar
 
-from ..._utils import _concatenate_sort
+from ..._utils import concatenate_sort
 from ...options import Options
 from ...qarrays.qarray import QArray
 from ...time_qarray import TimeQArray
@@ -45,7 +45,7 @@ class MEInterface(AbstractTimeInterface):
     @property
     def discontinuity_ts(self) -> Array | None:
         ts = [x.discontinuity_ts for x in [self.H, *self.Ls]]
-        return _concatenate_sort(*ts)
+        return concatenate_sort(*ts)
 
 
 class DSSEInterface(MEInterface):
@@ -76,7 +76,7 @@ class DSMEInterface(AbstractTimeInterface):
     @property
     def discontinuity_ts(self) -> Array | None:
         ts = [x.discontinuity_ts for x in [self.H, *self.Ls]]
-        return _concatenate_sort(*ts)
+        return concatenate_sort(*ts)
 
 
 class SolveInterface(eqx.Module):

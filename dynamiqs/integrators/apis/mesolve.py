@@ -27,8 +27,8 @@ from ...qarrays.utils import asqarray
 from ...result import MESolveResult
 from ...time_qarray import TimeQArray
 from .._utils import (
-    _astimeqarray,
     assert_method_supported,
+    astimeqarray,
     cartesian_vmap,
     catch_xla_runtime_error,
     multi_vmap,
@@ -212,8 +212,8 @@ def mesolve(
     tutorial for more details.
     """  # noqa: E501
     # === convert arguments
-    H = _astimeqarray(H)
-    Ls = [_astimeqarray(L) for L in jump_ops]
+    H = astimeqarray(H)
+    Ls = [astimeqarray(L) for L in jump_ops]
     rho0 = asqarray(rho0)
     tsave = jnp.asarray(tsave)
     if exp_ops is not None:

@@ -16,8 +16,8 @@ from ...result import SEPropagatorResult
 from ...time_qarray import TimeQArray
 from ...utils.operators import eye
 from .._utils import (
-    _astimeqarray,
     assert_method_supported,
+    astimeqarray,
     cartesian_vmap,
     catch_xla_runtime_error,
     ispwc,
@@ -154,7 +154,7 @@ def sepropagator(
     tutorial for more details.
     """
     # === convert arguments
-    H = _astimeqarray(H)
+    H = astimeqarray(H)
     tsave = jnp.asarray(tsave)
 
     # === check arguments

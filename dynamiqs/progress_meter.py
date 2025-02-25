@@ -28,7 +28,7 @@ class TextProgressMeter(AbstractProgressMeter):
         return dx.TextProgressMeter()
 
 
-def format_duration(duration_s: float) -> str:
+def _format_duration(duration_s: float) -> str:
     hours, remainder = divmod(duration_s, 3600)
     minutes, seconds = divmod(remainder, 60)
     milliseconds = seconds * 1000
@@ -54,10 +54,10 @@ class _TqdmCustom(tqdm):
             remaining_custom = '?'
         else:
             remaining = (total - n) / rate if rate and total else 0
-            remaining_custom = format_duration(remaining)
+            remaining_custom = _format_duration(remaining)
 
         # format elapsed
-        elapsed_custom = format_duration(elapsed)
+        elapsed_custom = _format_duration(elapsed)
 
         # update dict
         d.update(elapsed_custom=elapsed_custom, remaining_custom=remaining_custom)

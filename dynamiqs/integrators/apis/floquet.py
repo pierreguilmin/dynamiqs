@@ -15,8 +15,8 @@ from ...qarrays.qarray import QArrayLike
 from ...result import FloquetResult
 from ...time_qarray import TimeQArray
 from .._utils import (
-    _astimeqarray,
     assert_method_supported,
+    astimeqarray,
     cartesian_vmap,
     catch_xla_runtime_error,
 )
@@ -152,7 +152,7 @@ def floquet(
     ```
     """
     # === convert arguments
-    H = _astimeqarray(H)
+    H = astimeqarray(H)
     tsave = jnp.asarray(tsave)
 
     # === check arguments

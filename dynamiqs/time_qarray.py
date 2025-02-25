@@ -12,7 +12,7 @@ from jax import Array, lax
 from jaxtyping import ArrayLike, PyTree, Scalar, ScalarLike
 
 from ._checks import check_shape, check_times
-from ._utils import _concatenate_sort, cdtype, obj_type_str
+from ._utils import cdtype, concatenate_sort, obj_type_str
 from .qarrays.layout import Layout, dia, promote_layouts
 from .qarrays.qarray import QArray, QArrayLike, isqarraylike
 from .qarrays.utils import asqarray
@@ -779,7 +779,7 @@ class SummedTimeQArray(TimeQArray):
     @property
     def discontinuity_ts(self) -> Array | None:
         ts = [tqarray.discontinuity_ts for tqarray in self.timeqarrays]
-        return _concatenate_sort(*ts)
+        return concatenate_sort(*ts)
 
     def reshape(self, *shape: int) -> TimeQArray:
         timeqarrays = [tqarray.reshape(*shape) for tqarray in self.timeqarrays]

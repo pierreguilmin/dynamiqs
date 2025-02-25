@@ -8,9 +8,9 @@ from jax.typing import ArrayLike
 from .._utils import cdtype
 from ..qarrays.dense_qarray import DenseQArray
 from ..qarrays.layout import Layout, dense, get_layout
-from ..qarrays.qarray import QArray, QArrayLike, _get_dims, _to_jax
+from ..qarrays.qarray import QArray, QArrayLike, get_dims
 from ..qarrays.sparsedia_qarray import SparseDIAQArray
-from ..qarrays.utils import _init_dims, asqarray, sparsedia_from_dict
+from ..qarrays.utils import asqarray, init_dims, sparsedia_from_dict, to_jax
 from .general import tensor
 
 __all__ = [
@@ -132,10 +132,10 @@ def eye_like(
     See also:
         - [`dq.eye()`][dynamiqs.eye]: returns the identity operator.
     """
-    xdims = _get_dims(x)
+    xdims = get_dims(x)
     # todo: we should rather use a _get_shape util that never converts to a jax array
-    x = _to_jax(x)
-    dims = _init_dims(xdims, dims, x.shape)
+    x = to_jax(x)
+    dims = init_dims(xdims, dims, x.shape)
     return eye(*dims, layout=layout)
 
 
@@ -228,10 +228,10 @@ def zeros_like(
     See also:
         - [`dq.zeros()`][dynamiqs.zeros]: returns the null operator.
     """
-    xdims = _get_dims(x)
+    xdims = get_dims(x)
     # todo: we should rather use a _get_shape util that never converts to a jax array
-    x = _to_jax(x)
-    dims = _init_dims(xdims, dims, x.shape)
+    x = to_jax(x)
+    dims = init_dims(xdims, dims, x.shape)
     return zeros(*dims, layout=layout)
 
 

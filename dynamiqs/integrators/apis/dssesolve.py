@@ -16,8 +16,8 @@ from ...qarrays.utils import asqarray
 from ...result import DSSESolveResult
 from ...time_qarray import TimeQArray
 from .._utils import (
-    _astimeqarray,
     assert_method_supported,
+    astimeqarray,
     cartesian_vmap,
     catch_xla_runtime_error,
     multi_vmap,
@@ -222,8 +222,8 @@ def dssesolve(
         [open an issue on GitHub](https://github.com/dynamiqs/dynamiqs/issues/new).
     """  # noqa: E501
     # === convert arguments
-    H = _astimeqarray(H)
-    Ls = [_astimeqarray(L) for L in jump_ops]
+    H = astimeqarray(H)
+    Ls = [astimeqarray(L) for L in jump_ops]
     psi0 = asqarray(psi0)
     tsave = jnp.asarray(tsave)
     keys = jnp.asarray(keys)
