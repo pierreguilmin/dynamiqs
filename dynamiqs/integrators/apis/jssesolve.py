@@ -1,13 +1,36 @@
 from __future__ import annotations
 
+import logging
+from functools import partial
+
+import jax
+import jax.numpy as jnp
+from jax import Array
 from jaxtyping import ArrayLike, PRNGKeyArray
 
+from ..._checks import check_shape, check_times
 from ...gradient import Gradient
-from ...method import Method
+from ...method import Dopri5, Dopri8, Euler, Event, Kvaerno3, Kvaerno5, Method, Tsit5
 from ...options import Options
-from ...qarrays.qarray import QArrayLike
+from ...qarrays.qarray import QArray, QArrayLike
+from ...qarrays.utils import asqarray
 from ...result import JSSESolveResult
 from ...time_qarray import TimeQArray
+from .._utils import (
+    _astimeqarray,
+    assert_method_supported,
+    cartesian_vmap,
+    catch_xla_runtime_error,
+    multi_vmap,
+)
+from ..core.event_integrator import (
+    jssesolve_event_dopri5_integrator_constructor,
+    jssesolve_event_dopri8_integrator_constructor,
+    jssesolve_event_euler_integrator_constructor,
+    jssesolve_event_kvaerno3_integrator_constructor,
+    jssesolve_event_kvaerno5_integrator_constructor,
+    jssesolve_event_tsit5_integrator_constructor,
+)
 
 
 def jssesolve(
@@ -18,15 +41,11 @@ def jssesolve(
     keys: PRNGKeyArray,
     *,
     exp_ops: list[QArrayLike] | None = None,
-    method: Method | None = None,
+    method: Method | None = Event(),  # noqa: B008
     gradient: Gradient | None = None,
     options: Options = Options(),  # noqa: B008
 ) -> JSSESolveResult:
     r"""Solve the jump stochastic Schrödinger equation (SSE).
-
-    Warning:
-        This function has not been implemented yet. The following API is indicative
-        of the planned implementation.
 
     The jump SSE describes the evolution of a quantum system measured by an ideal jump
     detector (for example photodetection in quantum optics). This
@@ -65,10 +84,6 @@ def jssesolve(
     solver returns the times at which the detector clicked,
     $I_k = \{t \in [t_0, t_\text{end}[ \,|\, \dd N_k(t)=1\}$.
 
-    Warning:
-        For now, `jssesolve()` only supports linearly spaced `tsave` with values that
-        are exact multiples of the method fixed step size `dt`.
-
     Args:
         H _(qarray-like or time-qarray of shape (...H, n, n))_: Hamiltonian.
         jump_ops _(list of qarray-like or time-qarray, each of shape (n, n))_: List of
@@ -82,8 +97,8 @@ def jssesolve(
             trajectories.
         exp_ops _(list of array-like, each of shape (n, n), optional)_: List of
             operators for which the expectation value is computed.
-        method: Method for the integration. No defaults for now, you have to specify a
-            method (supported: [`EulerMaruyama`][dynamiqs.method.EulerMaruyama]).
+        method: Method for the integration. Defaults to
+            [`dq.method.Event()`](/python_api/method/Event.html).
         gradient: Algorithm used to compute the gradient. The default is
             method-dependent, refer to the documentation of the chosen method for more
             details.
@@ -94,9 +109,9 @@ def jssesolve(
                 dq.Options(
                     save_states: bool = True,
                     cartesian_batching: bool = True,
+                    t0: ScalarLike | None = None,
                     save_extra: callable[[Array], PyTree] | None = None,
                     nmaxclick: int = 10_000,
-                    smart_sampling: bool = False,
                 )
                 ```
 
@@ -107,17 +122,14 @@ def jssesolve(
                 - **cartesian_batching** - If `True`, batched arguments are treated as
                     separated batch dimensions, otherwise the batching is performed over
                     a single shared batched dimension.
+                - **t0** - Initial time. If `None`, defaults to the first time in
+                    `tsave`.
                 - **save_extra** _(function, optional)_ - A function with signature
                     `f(QArray) -> PyTree` that takes a state as input and returns a
                     PyTree. This can be used to save additional arbitrary data
                     during the integration, accessible in `result.extra`.
                 - **nmaxclick** - Maximum buffer size for `result.clicktimes`, should be
                     set higher than the expected maximum number of jump event.
-                - **smart_sampling** - If `True`, the no jump trajectory is simulated
-                    only once, and only trajectories with one or more jumps are sampled
-                    in `result.states`. The no jump state is accessible in
-                    `result.no_jump_state` with its associated probability
-                    `result.no_jump_proba`.
 
     Returns:
         `dq.JSSESolveResult` object holding the result of the jump SSE integration. Use
@@ -145,10 +157,12 @@ def jssesolve(
                 - **clicktimes** _(array of shape (..., ntrajs, len(jump_ops), nmaxclick))_ - Times
                     at which the detectors clicked. Variable-length array padded with
                     `None` up to `nmaxclick`.
-                - **no_jump_state** _(..., nsave, n, 1)_ - Saved state for the no jump
-                    trajectory, only if `options.smart_sampling=True`.
-                - **no_jump_proba** _(..., nsave)_ - Probability of the no jump
-                    trajectory, only if `options.smart_sampling=True`.
+                - **numclicks** _(array of shape (..., ntrajs, len(jump_ops))_ - Number
+                    of clicks for each jump operator.
+                - **nojump_states** _(..., nsave, n, 1)_ - Saved state for the no jump
+                    trajectory. Only for the `Event()` method with `smart_sampling`.
+                - **nojump_prob** _(..., nsave)_ - Probability of the no jump
+                    trajectory. Only for the `Event()` method with `smart_sampling`.
                 - **extra** _(PyTree or None)_ - Extra data saved with `save_extra()` if
                     specified in `options`.
                 - **keys** _(PRNG key array of shape (ntrajs,))_ - PRNG keys used to
@@ -213,4 +227,141 @@ def jssesolve(
         hesitate to
         [open an issue on GitHub](https://github.com/dynamiqs/dynamiqs/issues/new).
     """  # noqa: E501
-    return NotImplemented
+    # === convert arguments
+    H = _astimeqarray(H)
+    Ls = [_astimeqarray(L) for L in jump_ops]
+    psi0 = asqarray(psi0)
+    tsave = jnp.asarray(tsave)
+    keys = jnp.asarray(keys)
+    if exp_ops is not None:
+        exp_ops = [asqarray(E) for E in exp_ops] if len(exp_ops) > 0 else None
+
+    # === check arguments
+    _check_jssesolve_args(H, Ls, psi0, exp_ops)
+    tsave = check_times(tsave, 'tsave')
+
+    # we implement the jitted vectorization in another function to pre-convert QuTiP
+    # objects (which are not JIT-compatible) to JAX arrays
+    return _vectorized_jssesolve(
+        H, Ls, psi0, tsave, keys, exp_ops, method, gradient, options
+    )
+
+
+@catch_xla_runtime_error
+@partial(jax.jit, static_argnames=['method', 'gradient', 'options'])
+def _vectorized_jssesolve(
+    H: TimeQArray,
+    Ls: list[TimeQArray],
+    psi0: QArray,
+    tsave: Array,
+    keys: PRNGKeyArray,
+    exp_ops: list[QArray] | None,
+    method: Method,
+    gradient: Gradient | None,
+    options: Options,
+) -> JSSESolveResult:
+    f = _jssesolve_single_trajectory
+
+    # === vectorize function over stochastic trajectories
+    # the input is vectorized over `key`
+    in_axes = (None, None, None, None, 0, None, None, None, None)
+    # the result is vectorized over `_saved`, `infos` and `keys`
+    out_axes = JSSESolveResult.out_axes()
+    f = multi_vmap(f, in_axes, out_axes, keys.ndim)
+
+    # === vectorize function
+    # vectorize input over H, Ls and psi0.
+    in_axes = (H.in_axes, [L.in_axes for L in Ls], 0, *(None,) * 6)
+
+    if options.cartesian_batching:
+        nvmap = (H.ndim - 2, [L.ndim - 2 for L in Ls], psi0.ndim - 2, 0, 0, 0, 0, 0, 0)
+        f = cartesian_vmap(f, in_axes, out_axes, nvmap)
+    else:
+        bshape = jnp.broadcast_shapes(*[x.shape[:-2] for x in [H, *Ls, psi0]])
+        nvmap = len(bshape)
+        # broadcast all vectorized input to same shape
+        n = H.shape[-1]
+        H = H.broadcast_to(*bshape, n, n)
+        Ls = [L.broadcast_to(*bshape, n, n) for L in Ls]
+        psi0 = psi0.broadcast_to(*bshape, n, 1)
+        # vectorize the function
+        f = multi_vmap(f, in_axes, out_axes, nvmap)
+
+    return f(H, Ls, psi0, tsave, keys, exp_ops, method, gradient, options)
+
+
+def _jssesolve_single_trajectory(
+    H: TimeQArray,
+    Ls: list[TimeQArray],
+    psi0: QArray,
+    tsave: Array,
+    key: PRNGKeyArray,
+    exp_ops: list[QArray] | None,
+    method: Method,
+    gradient: Gradient | None,
+    options: Options,
+) -> JSSESolveResult:
+    # === select integrator constructor
+    supported_methods = (Event,)
+    assert_method_supported(method, supported_methods)
+    if isinstance(method, Event):
+        integrator_constructors = {
+            Euler: jssesolve_event_euler_integrator_constructor,
+            Dopri5: jssesolve_event_dopri5_integrator_constructor,
+            Dopri8: jssesolve_event_dopri8_integrator_constructor,
+            Tsit5: jssesolve_event_tsit5_integrator_constructor,
+            Kvaerno3: jssesolve_event_kvaerno3_integrator_constructor,
+            Kvaerno5: jssesolve_event_kvaerno5_integrator_constructor,
+        }
+        integrator_constructor = integrator_constructors[type(method.nojump_method)]
+    else:
+        # temporary until we implement other methods
+        raise NotImplementedError
+
+    # === check gradient is supported
+    method.assert_supports_gradient(gradient)
+
+    # === init integrator
+    integrator = integrator_constructor(
+        ts=tsave,
+        y0=psi0,
+        method=method,
+        gradient=gradient,
+        result_class=JSSESolveResult,
+        options=options,
+        H=H,
+        Ls=Ls,
+        Es=exp_ops,
+        key=key,
+    )
+
+    # === run integrator
+    result = integrator.run()
+
+    # === return result
+    return result  # noqa: RET504
+
+
+def _check_jssesolve_args(
+    H: TimeQArray, Ls: list[TimeQArray], psi0: QArray, exp_ops: list[QArray] | None
+):
+    # === check H shape
+    check_shape(H, 'H', '(..., n, n)', subs={'...': '...H'})
+
+    # === check Ls shape
+    for i, L in enumerate(Ls):
+        check_shape(L, f'Ls[{i}]', '(..., n, n)', subs={'...': f'...L{i}'})
+
+    if len(Ls) == 0:
+        logging.warning(
+            'Argument `jump_ops` is an empty list, consider using `dq.sesolve()` to'
+            ' solve the Schrödinger equation.'
+        )
+
+    # === check psi0 shape
+    check_shape(psi0, 'psi0', '(..., n, 1)', subs={'...': '...psi0'})
+
+    # === check exp_ops shape
+    if exp_ops is not None:
+        for i, E in enumerate(exp_ops):
+            check_shape(E, f'exp_ops[{i}]', '(n, n)')

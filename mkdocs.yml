@@ -179,6 +179,7 @@ nav:
               - EulerMaruyama: python_api/method/EulerMaruyama.md
               - Rouchon1: python_api/method/Rouchon1.md
               - Expm: python_api/method/Expm.md
+              - Event: python_api/method/Event.md
           - Gradients (dq.gradient):
               - Autograd: python_api/gradient/Autograd.md
               - CheckpointAutograd: python_api/gradient/CheckpointAutograd.md

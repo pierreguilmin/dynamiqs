@@ -4,10 +4,16 @@ from abc import abstractmethod
 
 import equinox as eqx
 import jax.numpy as jnp
-from jaxtyping import PyTree
+from jaxtyping import Array, PyTree
 
-from ...result import DiffusiveSolveSaved, PropagatorSaved, Saved, SolveSaved
-from ...utils.general import expect
+from ...result import (
+    DiffusiveSolveSaved,
+    JumpSolveSaved,
+    PropagatorSaved,
+    Saved,
+    SolveSaved,
+)
+from ...utils.general import expect, unit
 from .interfaces import OptionsInterface
 
 
@@ -53,6 +59,11 @@ class SolveSaveMixin(AbstractSaveMixin):
             Esave = None
         return SolveSaved(ysave, extra, Esave)
 
+    def reorder_Esave(self, saved: Saved) -> Saved:
+        if saved.Esave is not None:
+            saved = eqx.tree_at(lambda x: x.Esave, saved, saved.Esave.swapaxes(-1, -2))
+        return saved
+
     def postprocess_saved(self, saved: Saved, ylast: PyTree) -> Saved:
         # if save_states is False save only last state
         if not self.options.save_states:
@@ -61,9 +72,7 @@ class SolveSaveMixin(AbstractSaveMixin):
             )
 
         # reorder Esave after jax.lax.scan stacking (ntsave, nE) -> (nE, ntsave)
-        if saved.Esave is not None:
-            saved = eqx.tree_at(lambda x: x.Esave, saved, saved.Esave.swapaxes(-1, -2))
-        return saved
+        return self.reorder_Esave(saved)
 
 
 class DiffusiveSolveSaveMixin(SolveSaveMixin):
@@ -80,3 +89,18 @@ class DiffusiveSolveSaveMixin(SolveSaveMixin):
         # reorder Isave after jax.lax.scan stacking (ntsave, nLm) -> (nLm, ntsave)
         Isave = saved.Isave.swapaxes(-1, -2)
         return eqx.tree_at(lambda x: x.Isave, saved, Isave)
+
+
+class JumpSolveSaveMixin(SolveSaveMixin):
+    """Mixin to assist jump SSE/SME integrators computing time evolution with data
+    saving.
+    """
+
+    def save(self, y: PyTree) -> Saved:
+        # force state normalization before saving
+        return super().save(unit(y))
+
+    def postprocess_saved(self, saved: SolveSaved, clicktimes: Array) -> JumpSolveSaved:
+        ylast = saved.ysave[-1]
+        saved = super().postprocess_saved(saved, ylast)
+        return JumpSolveSaved(saved.ysave, saved.extra, saved.Esave, clicktimes)

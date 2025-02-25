@@ -19,7 +19,6 @@ class Options(eqx.Module):
     t0: ScalarLike | None = None
     save_extra: callable[[QArray], PyTree] | None = None
     nmaxclick: int = 10_000
-    smart_sampling: bool = False
 
     def __init__(
         self,
@@ -30,7 +29,6 @@ class Options(eqx.Module):
         t0: ScalarLike | None = None,
         save_extra: callable[[QArray], PyTree] | None = None,
         nmaxclick: int = 10_000,
-        smart_sampling: bool = False,
     ):
         if progress_meter is None:
             progress_meter = NoProgressMeter()
@@ -41,7 +39,6 @@ class Options(eqx.Module):
         self.progress_meter = progress_meter
         self.t0 = t0
         self.nmaxclick = nmaxclick
-        self.smart_sampling = smart_sampling
 
         # make `save_extra` a valid Pytree with `Partial`
         self.save_extra = jtu.Partial(save_extra) if save_extra is not None else None
@@ -72,9 +69,9 @@ def check_options(options: Options, solver_name: str):
         'jssesolve': (
             'save_states',
             'cartesian_batching',
+            't0',
             'save_extra',
             'nmaxclick',
-            'smart_sampling',
         ),
         'dssesolve': ('save_states', 'cartesian_batching', 'save_extra'),
         'jsmesolve': ('save_states', 'cartesian_batching', 'save_extra', 'nmaxclick'),

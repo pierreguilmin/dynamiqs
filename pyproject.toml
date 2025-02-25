@@ -65,10 +65,12 @@ dev = [
     "flit",
     "mike",
     "optax",  # for gradient descent tutorials
+    "optimistix", # for typing of root-finding in Event method
 ]
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
+exclude = ["examples/*"]
 
 [tool.ruff.format]
 quote-style = "single"

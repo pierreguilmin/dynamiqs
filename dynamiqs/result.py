@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from abc import abstractmethod
-
 import equinox as eqx
+import jax.numpy as jnp
 from jax import Array
 from jaxtyping import PRNGKeyArray, PyTree
 
@@ -60,6 +59,10 @@ class SolveSaved(Saved):
 
 class DiffusiveSolveSaved(SolveSaved):
     Isave: Array
+
+
+class JumpSolveSaved(SolveSaved):
+    clicktimes: Array
 
 
 class PropagatorSaved(Saved):
@@ -193,13 +196,26 @@ class MEPropagatorResult(PropagatorResult):
 
 
 class JSSESolveResult(SolveResult):
-    @abstractmethod
-    def no_jump_state(self) -> Array | None:
-        pass
+    keys: PRNGKeyArray
 
-    @abstractmethod
-    def no_jump_proba(self) -> Array | None:
-        pass
+    @property
+    def clicktimes(self) -> Array:
+        return self._saved.clicktimes
+
+    @property
+    def numclicks(self) -> Array:
+        return jnp.count_nonzero(~jnp.isnan(self.clicktimes), axis=-1)
+
+    def _str_parts(self) -> dict[str, str | None]:
+        d = super()._str_parts()
+        return d | {
+            'Clicktimes': array_str(self.clicktimes),
+            'Numclicks': array_str(self.numclicks),
+        }
+
+    @classmethod
+    def out_axes(cls) -> SolveResult:
+        return cls(None, None, None, None, 0, 0, 0)
 
 
 class JSMESolveResult(SolveResult):

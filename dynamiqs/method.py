@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import equinox as eqx
+from optimistix import AbstractRootFinder
 
 from ._utils import tree_str_inline
 from .gradient import Autograd, CheckpointAutograd, Gradient
@@ -17,6 +18,7 @@ __all__ = [
     'Kvaerno5',
     'Rouchon1',
     'Tsit5',
+    'Event',
 ]
 
 
@@ -399,3 +401,60 @@ class Kvaerno5(_DEAdaptiveStep):
         max_steps: int = 100_000,
     ):
         super().__init__(rtol, atol, safety_factor, min_factor, max_factor, max_steps)
+
+
+# === event method options for the jump SSE/SME
+class Event(_DEMethod):
+    """Event method for the jump SSE and SME.
+
+    This method uses diffrax's event handling to stop the no-jump integration when jumps
+    are detected. The no-jump integration is performed using the `nojump_method`
+    provided. The exact time of jumps can be refined by providing `root_finder`.
+    Furthermore, if `smart_sampling` is set to True, the no-jump evolution is only
+    sampled once over the whole time interval, and subsequent trajectories are sampled
+    with at least one jump.
+
+    Args:
+        nojump_method: Method for the no-jump evolution. Defaults to
+            [`Tsit5()`](/python_api/method/Tsit5.html).
+        root_finder: Root finder passed to
+            [`dx.diffeqsolve()`](https://docs.kidger.site/diffrax/api/diffeqsolve/) to
+            find the exact time an event occurs. Can be `None`, in which case the root
+            finding functionality is not utilized. It is recommended to pass a root
+            finder (such as the [optimistix Newton root finder](https://docs.kidger.site/optimistix/api/root_find/#optimistix.Newton))
+            so that event times are not determined by the integration step sizes in
+            diffeqsolve. However there are cases where the root finding can fail,
+            causing the whole simulation to fail. Passing `None` for `root_finder`
+            can alleviate the issue in these cases.
+        smart_sampling: If `True`, the no jump trajectory is simulated only once, and
+            `result.states` contains only trajectories with one or more jumps. The
+            no jump trajectoriy is accessible with `result.nojump_states`, and its
+            associated probability with `result.nojump_prob`.
+
+    Note-: Supported gradients
+        This method supports differentiation with
+        [`dq.gradient.Autograd`][dynamiqs.gradient.Autograd] and
+        [`dq.gradient.CheckpointAutograd`][dynamiqs.gradient.CheckpointAutograd]
+        (default).
+    """
+
+    nojump_method: Method = Tsit5()
+    root_finder: AbstractRootFinder | None = None
+    smart_sampling: bool = False
+
+    SUPPORTED_GRADIENT: ClassVar[_TupleGradient] = (Autograd, CheckpointAutograd)
+
+    # dummy init to have the signature in the documentation
+    def __init__(
+        self,
+        nojump_method: Method = Tsit5(),  # noqa: B008
+        root_finder: AbstractRootFinder | None = None,
+        smart_sampling: bool = False,
+    ):
+        self.nojump_method = nojump_method
+        self.root_finder = root_finder
+        self.smart_sampling = smart_sampling
+
+    # inherit attributes from the nojump_method
+    def __getattr__(self, attr: str) -> Any:
+        return getattr(self.nojump_method, attr)
