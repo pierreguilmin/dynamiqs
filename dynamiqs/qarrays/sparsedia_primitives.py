@@ -240,14 +240,14 @@ def matmul_array_sparsedia(
     array: Array, offsets: tuple[int, ...], diags: Array
 ) -> Array:
     batch_shape = jnp.broadcast_shapes(array.shape[:-2], diags.shape[:-2])
-    out_shape = (*batch_shape, array.shape[-1], diags.shape[-1])
+    out_shape = (*batch_shape, array.shape[-2], diags.shape[-1])
     dtype = jnp.promote_types(array.dtype, diags.dtype)
     out = jnp.zeros(out_shape, dtype=dtype)
     for i, offset in enumerate(offsets):
         slice_in = _sparsedia_slice(offset)
         slice_out = _sparsedia_slice(-offset)
-        tmp = array[..., :, slice_out] * diags[..., i, slice_in, None].T
-        out = out.at[..., slice_in, :].add(tmp)
+        tmp = array[..., :, slice_out] * diags[..., i, None, slice_in]
+        out = out.at[..., :, slice_in].add(tmp)
 
     return out
 

@@ -169,10 +169,13 @@ class DenseQArray(QArray):
         return self._replace(data=data)
 
     def __matmul__(self, y: QArrayLike) -> QArray | Array:
-        super().__matmul__(y)
+        from .sparsedia_qarray import SparseDIAQArray
 
+        super().__matmul__(y)
         if isinstance(y, DenseQArray):
             data = self.data @ y.data
+        elif isinstance(y, SparseDIAQArray):
+            return NotImplemented
         elif isqarraylike(y):
             data = self.data @ _to_jax(y)
         else:
