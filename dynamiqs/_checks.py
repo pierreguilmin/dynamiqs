@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 
 import equinox as eqx
+import jax
 import jax.numpy as jnp
 from jax import Array
 
@@ -113,12 +114,13 @@ def check_hermitian(x: QArray, argname: str) -> QArray:
 
 def _warn_non_normalised(x: QArrayLike, argname: str):
     # issue a warning if the input qarray-like is not normalised
+    def warn(norm: Array) -> None:
+        warnings.warn(
+            f'Argument {argname} is not normalized (expected norm 1).', stacklevel=2
+        )
+
     x = asqarray(x)
     atol = 1e-2 if _get_default_dtype() == jnp.float32 else 1e-6
     norm = x.norm()
-    if not jnp.allclose(norm, 1.0, rtol=0.0, atol=atol):
-        warnings.warn(
-            f'Argument {argname} is not normalized (expected norm 1.0 but norm is'
-            f' {norm}).',
-            stacklevel=2,
-        )
+    cond = jnp.allclose(norm, 1.0, rtol=0.0, atol=atol)
+    jax.lax.cond(cond, lambda _: None, warn, norm)
