@@ -377,7 +377,7 @@ def gifit(
         gif_buffer = BytesIO()
         # duration per frame in ms, rescaled to account for eventual duplicate frames
         duration = int(1000 / fps * nframes / len(indices))
-        pil_frames = [PILImage.fromarray(frame).convert('RGB') for frame in frames]
+        pil_frames = [PILImage.fromarray(frame).convert('RGBA') for frame in frames]
         pil_frames[0].save(
             gif_buffer,
             format='GIF',
@@ -385,6 +385,7 @@ def gifit(
             append_images=pil_frames[1:],
             duration=duration,
             loop=0,
+            disposal=2,
         )
 
         return Image(data=gif_buffer.getvalue(), format='gif')
