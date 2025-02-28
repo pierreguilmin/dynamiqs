@@ -232,10 +232,10 @@ class SparseDIAQArray(QArray):
         # === array representation with dots instead of zeros
         if jnp.issubdtype(self.dtype, jnp.complexfloating):
             # match '0. +0.j' with any number of spaces
-            pattern = r'(?<!\d)0\.\s*(\+|\-)0\.j'
+            pattern = r'(?<!\d)0\.(?:0+)?(?:e[+-]0+)?\s*[+-]\s*0\.(?:0+)?(?:e[+-]0+)?j'
         elif jnp.issubdtype(self.dtype, jnp.floating):
             # match '0.' with any number of spaces
-            pattern = r'(?<!\d)0\.\s*'
+            pattern = r'(?<!\d)0\.(?:0+)?(?:e[+-]0+)?\s*'
         elif jnp.issubdtype(self.dtype, jnp.integer):
             # match '0' with any number of spaces
             pattern = r'(?<!\d)0\s*'
